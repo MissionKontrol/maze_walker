@@ -16,26 +16,85 @@ fn main() {
     // Grab the bytes of the image.
     let bytes = &buf[..info.buffer_size()];
     let pixel_list = pixel_list_from_array(bytes);
-    // for (i, j) in pixel_list.iter().enumerate() {
-        // if j.red > 0 {
-            // print!(" {:?}", j.point);
-        // }
-        // else {
+    
+    let maze = Maze::new(
+        MazeDimensions { width: info.width,height: info.height},
+        &pixel_list
+        );
 
-        //     print!("#");
-        // }
-
-        // if (i + 1) % 41 == 0 && i > 0 {
-        //     println!();
-        // }
-    // }
-
-    let entrances = find_start(pixel_list);
+    let entrances = find_start(&pixel_list);
     for entry in entrances.iter() {
-        println!("{},{}", entry.x, entry.y);
+        println!("Entry @ {},{}", entry.x, entry.y);
     }
     // let in_animation = reader.info().frame_control.is_some();
 }
+
+fn to_index(point: &Point) -> usize {
+    point.y * 41 + point.x
+}
+
+fn solve_maze(maze: Vec<Pixel>, start: Point) {
+    let start_nodes = find_start(&maze);
+    
+    // arbitraily use first node
+    let start = &start_nodes[0];
+    let position_index = |point: &Point| point.y * 41 + point.x;
+
+}
+
+struct Conectors {
+    north: bool, 
+    east: bool,
+    south: bool,
+    west: bool,
+}
+
+struct MazeNode {
+    point: Point,
+    conections: Option<Conectors>,
+    passable: u8,
+}
+
+struct Maze {
+    dimensions: MazeDimensions,
+    nodes: Vec<MazeNode>,
+}
+
+impl Maze {
+    fn new(dimensions: MazeDimensions, pixel_list: &Vec<Pixel>) -> Self {
+        let maze = Maze { dimensions, nodes: Vec::new() };
+        let get_from = |x| {
+            match x {
+                true => 1,
+                false => 0,
+            }
+        };
+
+        let node_list = pixel_list.iter().map(|pixel| {
+                if pixel.passable() {
+                    Some(MazeNode { 
+                        point: pixel.point,
+                        passable: get_from(pixel.passable()),
+                        conections: None,
+                    })
+                }
+                else {None}
+            }).collect::<Vec<Option<MazeNode>>>();
+
+        for node in node_list.iter() {
+            
+        }
+
+
+        maze
+    }
+}
+
+struct MazeDimensions {
+    width: u32,
+    height: u32,
+}
+
 
 #[derive(Clone)]
 struct Pixel {
@@ -46,10 +105,23 @@ struct Pixel {
     point: Point,
 }
 
+struct MazeSolution {
+    start: Point,
+    solution_tree: Vec<MazeSolutionNode>,
+}
+
+struct MazeSolutionNode {
+    point: Point,
+    child: Option<Box<MazeSolutionNode>>,
+    child_cost: u32,
+    peer: Option<Box<MazeSolutionNode>>,
+    peer_cost: u32,
+}
+
 impl Pixel {
     fn passable(&self) -> bool {
         if self.red > 0 ||
-            self.green > 0 ||
+        self.green > 0 ||
             self. blue > 0 { return true }
         false
     }
@@ -91,7 +163,7 @@ fn summarize(info: &OutputInfo) {
 }
 
 // look around the box edges, return passable
-fn find_start(maze: Vec<Pixel>) -> Vec<Point> {
+fn find_start(maze: &Vec<Pixel>) -> Vec<Point> {
     let mut entrace_list: Vec<Point> = Vec::new();
     let index = |point: &Point| point.y * 41 + point.x;
 
@@ -127,7 +199,7 @@ fn find_start(maze: Vec<Pixel>) -> Vec<Point> {
     entrace_list
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 struct Point {
     x: usize,
     y: usize,
