@@ -1,4 +1,5 @@
 use std::{fs::File, default};
+use std::collections::BTreeMap;
 
 use png::{Info, OutputInfo};
 
@@ -29,8 +30,8 @@ fn main() {
     // let in_animation = reader.info().frame_control.is_some();
 }
 
-fn to_index(point: &Point) -> usize {
-    point.y * 41 + point.x
+fn to_index(point: &Point, width: usize ) -> usize {
+    point.y * width + point.x
 }
 
 fn solve_maze(maze: Vec<Pixel>, start: Point) {
@@ -42,53 +43,135 @@ fn solve_maze(maze: Vec<Pixel>, start: Point) {
 
 }
 
-struct Conectors {
+struct Connectors {
     north: bool, 
     east: bool,
     south: bool,
     west: bool,
 }
 
+impl Connectors {
+    fn new() -> Self {
+        Connectors {
+            north: false,
+            south: false,
+            east: false,
+            west: false,
+        }
+    }
+}
+
 struct MazeNode {
-    point: Point,
-    conections: Option<Conectors>,
+    conections: Option<Point>,
     passable: u8,
+}
+
+impl MazeNode {
+    fn new() -> Self {
+        MazeNode { conections: None, passable: 0 }
+    }
+    
+    fn is_passable(&self) -> bool {
+        if let 0 = self.passable {
+            false
+        } else {
+            true
+        }
+    }
+}
+
+impl Default for MazeNode {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 struct Maze {
     dimensions: MazeDimensions,
-    nodes: Vec<MazeNode>,
+    nodes: BTreeMap<Point,MazeNode>,
 }
 
 impl Maze {
     fn new(dimensions: MazeDimensions, pixel_list: &Vec<Pixel>) -> Self {
-        let maze = Maze { dimensions, nodes: Vec::new() };
-        let get_from = |x| {
+        let mut maze = Maze { dimensions, nodes: BTreeMap::new() };
+
+        let _node_insert_list: Vec<Option<MazeNode>> = pixel_list.iter().map(|pixel| -> Option<MazeNode> 
+            { maze.nodes.insert(pixel.point,
+                MazeNode { 
+                    passable: get_from_bool(pixel.passable()),
+                    conections: None,
+            })}).collect();
+
+        let maze = maze.try_connect(pixel_list);
+        maze
+    }
+
+    fn try_connect(mut self, pixel_list: &Vec<Pixel>) -> Self {
+        for y in 0..=self.dimensions.height as usize {
+            for x in 0..=self.dimensions.width as usize {
+                let point = Point{x,y};
+                let node = self.nodes.get(&point).unwrap();
+                let neighbour_points = self.get_connections(&point, pixel_list);
+
+
+            }
+        }
+        self
+    }
+
+    fn get_connections(&self, origin: &Point, pixel_list: &Vec<Pixel>) -> Connectors {
+        let mut connectors = Connectors::new();
+
+        let north = {
+            if origin.y == 0 { connectors.north = false }
+            else { 
+                
+                connectors.north = false }
+        };
+
+        let south = ||{
+            if origin.y == self.dimensions.height as usize { connectors.south = false }
+            else { connectors.south = true }
+        };
+        
+        let west = ||{
+            if origin.x == 0 { connectors.west = false }
+            else {  connectors.west = true }
+        };
+        
+        let east = ||{
+            if origin.x == self.dimensions.width as usize { connectors.east = false }
+            else { connectors.east = true }
+        };
+        
+        connectors
+    }
+
+    fn get_north_point(&self, origin: &Point, pixel_list: &Vec<Pixel> ) -> Option<MazeNode> {
+        let mazenode = MazeNode::new();
+
+        let north_point = if origin.y > 0 { Some(Point { x: origin.x, y: origin.y + 1 })}
+                                        else { None };
+
+        todo!()
+    }
+
+    fn get_neighbour(&self, neighbour: Option<Point>) -> Option<&MazeNode> {
+        if let Some(point) = neighbour {
+            if let Some((_key, node)) = self.nodes.get_key_value(&point) {
+                Some(node)
+            }
+            else { None }
+        }
+        else { None }
+    }
+}
+fn get_from_bool(x: bool) -> u8 {
             match x {
                 true => 1,
                 false => 0,
             }
-        };
-
-        let node_list = pixel_list.iter().map(|pixel| {
-                if pixel.passable() {
-                    Some(MazeNode { 
-                        point: pixel.point,
-                        passable: get_from(pixel.passable()),
-                        conections: None,
-                    })
-                }
-                else {None}
-            }).collect::<Vec<Option<MazeNode>>>();
-
-        for node in node_list.iter() {
-            
         }
-
-
-        maze
-    }
-}
 
 struct MazeDimensions {
     width: u32,
@@ -199,7 +282,7 @@ fn find_start(maze: &Vec<Pixel>) -> Vec<Point> {
     entrace_list
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 struct Point {
     x: usize,
     y: usize,
