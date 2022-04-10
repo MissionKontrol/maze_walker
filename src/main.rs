@@ -19,7 +19,7 @@ fn main() {
     let pixel_list = pixel_list_from_array(bytes);
     
     let maze = Maze::new(
-        MazeDimensions { width: info.width,height: info.height},
+        Dimensions { width: info.width, height: info.height},
         &pixel_list
         );
 
@@ -28,10 +28,6 @@ fn main() {
         println!("Entry @ {},{}", entry.x, entry.y);
     }
     // let in_animation = reader.info().frame_control.is_some();
-}
-
-fn to_index(point: &Point, width: usize ) -> usize {
-    point.y * width + point.x
 }
 
 fn solve_maze(maze: Vec<Pixel>, start: Point) {
@@ -88,44 +84,88 @@ impl Default for MazeNode {
 }
 
 struct Maze {
-    dimensions: MazeDimensions,
+    dimensions: Dimensions,
     nodes: BTreeMap<Point,MazeNode>,
 }
 
 impl Maze {
-    fn new(dimensions: MazeDimensions, pixel_list: &Vec<Pixel>) -> Self {
+    fn new(dimensions: Dimensions, pixel_list: &Vec<Pixel>) -> Self {
         let mut maze = Maze { dimensions, nodes: BTreeMap::new() };
 
         let node_insert_list: Vec<(Point,MazeNode)> = pixel_list.iter().enumerate().map(|(index, pixel)| -> (Point,MazeNode) {
-            let point = Point { 
-                x: index / dimensions.width as usize, 
-                y: index,
-            };
+            let point = pixel.point;
             let node = MazeNode { 
-                passable: get_from_bool(pixel.passable()),
                 conections: None,
+                passable: get_from_bool(pixel.passable()),
             };
 
             (point,node)}).collect();
+
+        
 
         let mut node_tree: BTreeMap<Point,MazeNode> = BTreeMap::new();
         let _insert_result = node_insert_list.iter().map( |node| {
             node_tree.insert(node.0, node.1)
         }).collect::<Vec<Option<MazeNode>>>();
 
-        println!("Insert result \n\tlength: {}\n\texpected length: {}\n", _insert_result.len(), dimensions.height * dimensions.width);
-        
-        let result_count = _insert_result.iter().fold((0,0), |acc,x|
-            match x {
-                Some(x) => (acc.0 + 1, acc.1),
-                None => (acc.0, acc.1 + 1),
-            }
-        );
+        for (point, node) in &node_tree {
+            if node.is_passable(){
+                let mut neighbours: Vec<Direction> = Vec::new();
+                if point.y > 0 {
+                    neighbours.push(Direction::North);
+                }
+                if point.y < dimensions.height.try_into().unwrap() {
+                    neighbours.push(Direction::South);
+                }
+                if point.x > 0 { neighbours.push(Direction::West);}
+                if point.x < dimensions.width.try_into().unwrap() { 
+                    neighbours.push(Direction::East);
+                }
 
-        println!("Some: {}\nNone {}", result_count.0, result_count.1);
+                neighbours.iter().map(|direction| -> bool {
+                    todo!()
+                });
+                let passable_direction = get_connection(point, Direction::North);
+
+            }
+        }
+
         maze.nodes = node_tree;
         maze
     }
+}
+
+fn get_connection(point: &Point, direction: Direction) -> bool {
+    let target = match direction {
+        Direction::North => {
+            if point.y > 0 {
+                Some(Point {
+                    x: point.x,
+                    y: point.y - 1,
+                })
+            }
+            else { None }
+        },
+        Direction::South => {
+            if point.y > 0 {
+                Some(Point {
+                    x: point.x,
+                    y: point.y - 1,
+                })
+            }
+            else { None }
+        },
+        _ => todo!()
+    };
+
+    todo!()
+}
+
+enum Direction {
+    North,
+    South,
+    East,
+    West,
 }
 
 fn get_from_bool(x: bool) -> u8 {
@@ -136,11 +176,10 @@ fn get_from_bool(x: bool) -> u8 {
 }
 
 #[derive(Clone, Copy)]
-struct MazeDimensions {
+struct Dimensions {
     width: u32,
     height: u32,
 }
-
 
 #[derive(Clone)]
 struct Pixel {
@@ -151,31 +190,65 @@ struct Pixel {
     point: Point,
 }
 
-struct MazeSolution {
-    start: Point,
-    solution_tree: Vec<MazeSolutionNode>,
-}
-
-struct MazeSolutionNode {
-    point: Point,
-    child: Option<Box<MazeSolutionNode>>,
-    child_cost: u32,
-    peer: Option<Box<MazeSolutionNode>>,
-    peer_cost: u32,
-}
-
 impl Pixel {
     fn passable(&self) -> bool {
         if self.red > 0 ||
         self.green > 0 ||
-            self. blue > 0 { return true }
-        false
+            self. blue > 0 { return false }
+        true
+    }
+
+    fn to_index(point: &Point, width: usize ) -> usize {
+        point.y * width + point.x
     }
 }
 
 impl Default for Pixel {
     fn default() -> Pixel {
         Pixel { red: 0, green: 0, blue: 0, alpha: 0, point: Default::default() }
+    }
+}
+
+struct PixelList {
+    list: Vec<Pixel>,
+    dimensions: Dimensions,
+}
+
+impl PixelList {
+    fn new(array: &[u8], dimensions: Dimensions) -> Self {
+        const RGBA: usize = 4;
+        let mut pixel_list = Vec::with_capacity(array.len()/RGBA);
+    
+        array.iter().enumerate().fold(Pixel::default(), |mut acc: Pixel, (i,byte)| {
+            match (i + 1) % RGBA {
+                0 => {  acc.alpha = *byte;
+                        let line_size: usize = dimensions.width.try_into().unwrap();
+                        acc.point = Point{ x: ((i / RGBA) % line_size ), y: i / 164};  
+                        pixel_list.push(acc.clone())},
+                1 => acc.red = *byte,
+                2 => acc.green = *byte,
+                3 => acc.blue = *byte,
+                _ => panic!("inconcievable RGBA value {i}")
+            };
+    
+            acc
+        });
+        
+        PixelList { 
+            dimensions: Dimensions {
+                width: dimensions.width,
+                height: dimensions.height,
+            },
+            list: pixel_list,
+        }
+    }
+
+    fn get_point(point: &Point) -> &'static MazeNode {
+        todo!();
+    }
+
+    fn is_passable(point: &Point) -> bool {
+        PixelList::get_point(point).is_passable()
     }
 }
 
