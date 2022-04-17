@@ -1,7 +1,8 @@
-use std::{fs::File};
 use std::collections::BTreeMap;
+use std::f64::consts::E;
+use std::fs::File;
 
-use png::{OutputInfo};
+use png::OutputInfo;
 
 fn main() {
     // The decoder is a build for reader and can be used to set various decoding options
@@ -16,34 +17,43 @@ fn main() {
 
     // Grab the bytes of the image.
     let bytes = &buf[..info.buffer_size()];
-    let dimensions = Dimensions { width: info.width, height: info.height};
+    let dimensions = Dimensions {
+        width: info.width,
+        height: info.height,
+    };
     let pixel_list = PixelList::new(bytes, dimensions);
-    println!("Pixel list length {}", pixel_list.list.len());
-    // let pixel_list = pixel_list_from_array(bytes);
-    
+
     let maze = Maze::new(
-        Dimensions { width: info.width, height: info.height},
-        &pixel_list
-        );
+        Dimensions {
+            width: info.width,
+            height: info.height,
+        },
+        &pixel_list,
+    );
 
-    // let entrances = find_start(&pixel_list);
-    // for entry in entrances.iter() {
-    //     println!("Entry @ {},{}", entry.x, entry.y);
-    // }
+    maze.print_maze();
+
+    let entrances = find_start(&maze);
+    solve_maze(&maze, &entrances[0]);
 }
 
-fn solve_maze(maze: Vec<Pixel>, start: Point) {
-    let start_nodes = find_start(&maze);
-    
-    // arbitraily use first node
-    let start = &start_nodes[0];
-    let position_index = |point: &Point| point.y * 41 + point.x;
+fn solve_maze(maze: &Maze, start: &Point) {
+    let current_node = maze.nodes.get(start).unwrap();
 
+    if current_node.conections.north {
+    }
 }
 
-#[derive(Clone, Copy)]
+enum CardinalDirections {
+    North,
+    East,
+    South,
+    West,
+}
+
+#[derive(Clone, Copy, Debug)]
 struct Connectors {
-    north: bool, 
+    north: bool,
     east: bool,
     south: bool,
     west: bool,
@@ -60,7 +70,7 @@ impl Connectors {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct MazeNode {
     conections: Connectors,
     passable: u8,
@@ -68,9 +78,12 @@ struct MazeNode {
 
 impl MazeNode {
     fn new() -> Self {
-        MazeNode { conections: Connectors::new(), passable: 0 }
+        MazeNode {
+            conections: Connectors::new(),
+            passable: 0,
+        }
     }
-    
+
     fn is_passable(&self) -> bool {
         if 0 == self.passable {
             false
@@ -88,72 +101,111 @@ impl Default for MazeNode {
 
 struct Maze {
     dimensions: Dimensions,
-    nodes: BTreeMap<Point,MazeNode>,
+    nodes: BTreeMap<Point, MazeNode>,
 }
 
 impl Maze {
     fn new(dimensions: Dimensions, pixel_list: &PixelList) -> Self {
-        let mut maze = Maze { dimensions, nodes: BTreeMap::new() };
+        let mut maze = Maze {
+            dimensions,
+            nodes: BTreeMap::new(),
+        };
 
-        let node_insert_list: Vec<(Point,MazeNode)> = pixel_list.list.iter().enumerate().map(|(index, pixel)| -> (Point,MazeNode) {
-            let point = pixel.point;
-            let node = MazeNode { 
-                conections: Connectors::new(),
-                passable: get_from_bool(pixel.passable()),
-            };
+        let node_insert_list: Vec<(Point, MazeNode)> = pixel_list
+            .list
+            .iter()
+            .map(|pixel| -> (Point, MazeNode) {
+                let point = pixel.point;
 
-            (point,node)}).collect();
+                let mut node = MazeNode {
+                    conections: Connectors::new(),
+                    passable: get_from_bool(pixel.passable()),
+                };
 
-        let mut node_tree: BTreeMap<Point,MazeNode> = BTreeMap::new();
-        let _insert_result = node_insert_list.iter().map( |node| {
-            node_tree.insert(node.0, node.1)
-        }).collect::<Vec<Option<MazeNode>>>();
-
-        for (point, node) in &node_tree {
-            if node.is_passable(){
-                let mut neighbours: Vec<Direction> = Vec::new();
-                if point.y > 0 {
-                    neighbours.push(Direction::North);
-                }
-                if point.y < dimensions.height.try_into().unwrap() {
-                    neighbours.push(Direction::South);
-                }
-                if point.x > 0 { neighbours.push(Direction::West);}
-                if point.x < dimensions.width.try_into().unwrap() { 
-                    neighbours.push(Direction::East);
+                if pixel.passable() {
+                    node = get_passable_neighbours(&point, pixel_list);
+                    node.passable = 1;
                 }
 
-                let x: Vec<(&Point, &Direction)> = neighbours.iter().map(|direction| -> Option<(&Point, &Direction)> {
-                    let neighbour_point = match direction {
-                        Direction::North => Point{ x: point.x, y: point.y - 1 },
-                        Direction::South => Point{ x: point.x, y: point.y + 1 },
-                        Direction::East => Point{ x: point.x + 1, y: point.y },
-                        Direction::West => Point{ x: point.x - 1, y: point.y },
-                    };
-                    if pixel_list.is_passable( &neighbour_point ) {
-                        Some(( point,direction ))
-                    }
-                    else { None }
-                }).flatten().collect();
+                (point, node)
+            })
+            .collect();
 
-                x.iter().map(|x| {
-                    println!("{:?} {:?}", x.0, x.1);
+        let _foo = node_insert_list
+            .iter()
+            .map(|(point, node)| maze.nodes.insert(*point, *node))
+            .flatten()
+            .collect::<Vec<MazeNode>>();
 
-                });
-            }
-        }
-
-        maze.nodes = node_tree;
         maze
+    }
+
+    fn print_maze(&self) {
+        for y in 0..self.dimensions.height {
+            for x in 0..self.dimensions.width {
+                let foo = self
+                    .nodes
+                    .get(&Point {
+                        x: x.try_into().unwrap(),
+                        y: y.try_into().unwrap(),
+                    })
+                    .unwrap();
+                if foo.is_passable() {
+                    print!(" ");
+                } else {
+                    print!("*");
+                }
+            }
+            println!();
+        }
     }
 }
 
-#[derive(Debug)]
-enum Direction {
-    North,
-    South,
-    East,
-    West,
+fn get_passable_neighbours(point: &Point, pixel_list: &PixelList) -> MazeNode {
+    let mut node_update = MazeNode::new();
+
+    if point.y > 0 {
+        let north_point = Point {
+            x: point.x,
+            y: point.y - 1,
+        };
+
+        if pixel_list.is_passable(&north_point) {
+            node_update.conections.north = true;
+        }
+    }
+    if point.y + 1 < pixel_list.dimensions.height.try_into().unwrap() {
+        let south_point = Point {
+            x: point.x,
+            y: point.y + 1,
+        };
+
+        if pixel_list.is_passable(&south_point) {
+            node_update.conections.south = true;
+        }
+    }
+    if point.x > 0 {
+        let west_point = Point {
+            x: point.x - 1,
+            y: point.y,
+        };
+
+        if pixel_list.is_passable(&west_point) {
+            node_update.conections.west = true;
+        }
+    }
+    if point.x + 1 < pixel_list.dimensions.width.try_into().unwrap() {
+        let east_point = Point {
+            x: point.x + 1,
+            y: point.y,
+        };
+
+        if pixel_list.is_passable(&east_point) {
+            node_update.conections.east = true;
+        }
+    }
+
+    node_update
 }
 
 fn get_from_bool(x: bool) -> u8 {
@@ -180,16 +232,22 @@ struct Pixel {
 
 impl Pixel {
     fn passable(&self) -> bool {
-        if self.red > 0 ||
-        self.green > 0 ||
-            self. blue > 0 { return false }
-        true
+        if self.red > 0 || self.green > 0 || self.blue > 0 {
+            return true;
+        }
+        false
     }
 }
 
 impl Default for Pixel {
     fn default() -> Pixel {
-        Pixel { red: 0, green: 0, blue: 0, alpha: 0, point: Default::default() }
+        Pixel {
+            red: 0,
+            green: 0,
+            blue: 0,
+            alpha: 0,
+            point: Default::default(),
+        }
     }
 }
 
@@ -201,24 +259,32 @@ struct PixelList {
 impl PixelList {
     fn new(array: &[u8], dimensions: Dimensions) -> Self {
         const RGBA: usize = 4;
-        let mut pixel_list = Vec::with_capacity(array.len()/RGBA);
-    
-        array.iter().enumerate().fold(Pixel::default(), |mut acc: Pixel, (i,byte)| {
-            match (i + 1) % RGBA {
-                0 => {  acc.alpha = *byte;
+        let mut pixel_list = Vec::with_capacity(array.len() / RGBA);
+
+        array
+            .iter()
+            .enumerate()
+            .fold(Pixel::default(), |mut acc: Pixel, (i, byte)| {
+                match (i + 1) % RGBA {
+                    0 => {
+                        acc.alpha = *byte;
                         let line_size: usize = dimensions.width.try_into().unwrap();
-                        acc.point = Point{ x: ((i / RGBA) % line_size ), y: i % (line_size/RGBA)};  
-                        pixel_list.push(acc.clone())},
-                1 => acc.red = *byte,
-                2 => acc.green = *byte,
-                3 => acc.blue = *byte,
-                _ => panic!("inconcievable RGBA value {i}")
-            };
-    
-            acc
-        });
-        
-        PixelList { 
+                        acc.point = Point {
+                            x: (i / RGBA) % 41,
+                            y: i / (line_size * RGBA),
+                        };
+                        pixel_list.push(acc.clone())
+                    }
+                    1 => acc.red = *byte,
+                    2 => acc.green = *byte,
+                    3 => acc.blue = *byte,
+                    _ => panic!("inconcievable RGBA value {i}"),
+                };
+
+                acc
+            });
+
+        PixelList {
             dimensions: Dimensions {
                 width: dimensions.width,
                 height: dimensions.height,
@@ -228,17 +294,15 @@ impl PixelList {
     }
 
     fn is_passable(&self, point: &Point) -> bool {
-        print!("{point:?} ");
         self.get_point(point).passable()
     }
 
     fn get_point(&self, point: &Point) -> &Pixel {
         let index: usize = self.to_index(point);
-        println!("{index}");
         self.list.get(index).unwrap()
     }
 
-    fn to_index(&self, point: &Point ) -> usize {
+    fn to_index(&self, point: &Point) -> usize {
         let width: usize = self.dimensions.width.try_into().unwrap();
         point.y * width + point.x
     }
@@ -246,39 +310,49 @@ impl PixelList {
 
 fn summarize(info: &OutputInfo) {
     println!("width {} * height {}", info.width, info.height);
-    println!("bit depth {:?}, line size {}", info.bit_depth, info.line_size);
+    println!(
+        "bit depth {:?}, line size {}",
+        info.bit_depth, info.line_size
+    );
     println!("colour type {:?}", info.color_type);
 }
 
 // look around the box edges, return passable
-fn find_start(maze: &Vec<Pixel>) -> Vec<Point> {
+fn find_start(maze: &Maze) -> Vec<Point> {
     let mut entrace_list: Vec<Point> = Vec::new();
-    let index = |point: &Point| point.y * 41 + point.x;
+    let width: usize = maze.dimensions.width.try_into().unwrap();
+    let height: usize = maze.dimensions.height.try_into().unwrap();
 
     // top and bottom
-    for y in [0,40] {
-        for x in 0..41 {
+    for y in 0..height {
+        for x in 0..width {
             let current_location = Point { x, y };
-            let pixel = match maze.get(index(&current_location)){
+            let node = match maze.nodes.get(&current_location) {
                 Some(pixel) => pixel,
-                None => panic!("invalid pixel index {},{}", current_location.x, current_location.y),
+                None => panic!(
+                    "invalid pixel index {},{}",
+                    current_location.x, current_location.y
+                ),
             };
 
-            if pixel.passable() {
+            if node.is_passable() {
                 entrace_list.push(current_location);
             }
         }
     }
 
-    for x in [0,40] {
-        for y in 0..41 {
+    for x in 0..height {
+        for y in 0..width {
             let current_location = Point { x, y };
-            let pixel = match maze.get(index(&current_location)){
+            let node = match maze.nodes.get(&current_location) {
                 Some(pixel) => pixel,
-                None => panic!("invalid pixel index {},{}", current_location.x, current_location.y),
+                None => panic!(
+                    "invalid pixel index {},{}",
+                    current_location.x, current_location.y
+                ),
             };
 
-            if pixel.passable() {
+            if node.is_passable() {
                 entrace_list.push(current_location);
             }
         }
