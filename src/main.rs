@@ -39,33 +39,29 @@ fn main() {
 
 fn solve_maze(maze: &Maze, start: &Point) {
     let current_node = maze.nodes.get(start).unwrap();
+    let last_node = current_node;
 
-    if current_node.conections.north {
+    if let Some(node) = current_node.conections.north {
+        let current_node = maze.nodes.get(&node);
     }
 }
 
-enum CardinalDirections {
-    North,
-    East,
-    South,
-    West,
-}
 
 #[derive(Clone, Copy, Debug)]
 struct Connectors {
-    north: bool,
-    east: bool,
-    south: bool,
-    west: bool,
+    north: Option<Point>,
+    east: Option<Point>,
+    south: Option<Point>,
+    west: Option<Point>,
 }
 
 impl Connectors {
     fn new() -> Self {
         Connectors {
-            north: false,
-            south: false,
-            east: false,
-            west: false,
+            north: None,
+            south: None,
+            east: None,
+            west: None,
         }
     }
 }
@@ -171,7 +167,7 @@ fn get_passable_neighbours(point: &Point, pixel_list: &PixelList) -> MazeNode {
         };
 
         if pixel_list.is_passable(&north_point) {
-            node_update.conections.north = true;
+            node_update.conections.north = Some(north_point);
         }
     }
     if point.y + 1 < pixel_list.dimensions.height.try_into().unwrap() {
@@ -181,7 +177,7 @@ fn get_passable_neighbours(point: &Point, pixel_list: &PixelList) -> MazeNode {
         };
 
         if pixel_list.is_passable(&south_point) {
-            node_update.conections.south = true;
+            node_update.conections.south = Some(south_point);
         }
     }
     if point.x > 0 {
@@ -191,7 +187,7 @@ fn get_passable_neighbours(point: &Point, pixel_list: &PixelList) -> MazeNode {
         };
 
         if pixel_list.is_passable(&west_point) {
-            node_update.conections.west = true;
+            node_update.conections.west = Some(west_point);
         }
     }
     if point.x + 1 < pixel_list.dimensions.width.try_into().unwrap() {
@@ -201,7 +197,7 @@ fn get_passable_neighbours(point: &Point, pixel_list: &PixelList) -> MazeNode {
         };
 
         if pixel_list.is_passable(&east_point) {
-            node_update.conections.east = true;
+            node_update.conections.east = Some(east_point);
         }
     }
 
