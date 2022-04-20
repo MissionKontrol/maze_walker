@@ -1,13 +1,13 @@
 use std::collections::BTreeMap;
-use std::f64::consts::E;
 use std::fs::File;
+use std::process::exit;
 
 use png::OutputInfo;
 
 fn main() {
     // The decoder is a build for reader and can be used to set various decoding options
     // via `Transformations`. The default output transformation is `Transformations::IDENTITY`.
-    let decoder = png::Decoder::new(File::open("mazes/maze-smallpixel.png").unwrap());
+    let decoder = png::Decoder::new(File::open("mazes/maze(6).png").unwrap());
     let mut reader = decoder.read_info().unwrap();
     // Allocate the output buffer.
     let mut buf = vec![0; reader.output_buffer_size()];
@@ -34,18 +34,49 @@ fn main() {
     maze.print_maze();
 
     let entrances = find_start(&maze);
-    solve_maze(&maze, &entrances[0]);
+    println!("Entrances {:?} {:?}", entrances[0], entrances[1]);
+    solve_maze(&maze, &entrances[0], &entrances[1], &entrances[1]);
 }
 
-fn solve_maze(maze: &Maze, start: &Point) {
-    let current_node = maze.nodes.get(start).unwrap();
-    let last_node = current_node;
-
-    if let Some(node) = current_node.conections.north {
-        let current_node = maze.nodes.get(&node);
+fn solve_maze(maze: &Maze, start: &Point, end: &Point, last: &Point) {
+    if start == end {
+        println!("Found exit: {end:?}");
+        exit(0)
     }
+
+    let current_node = maze.nodes.get(start).unwrap();
+    if let Some(connection_points) = get_connections(current_node) {
+        for point in connection_points.iter() {
+            println!("point: {point:?}  start: {start:?}");
+            if point == last { continue; }
+
+            let last = start;
+            solve_maze(maze, point, end, last)
+        }
+    }
+    else { return }
 }
 
+fn get_connections(node:&MazeNode) -> Option<Vec<Point>> {
+    let mut connections: Vec<Point> = Vec::new();
+    if let Some(node) = node.conections.north {
+        connections.push(node);
+    }
+    if let Some(node) = node.conections.east {
+        connections.push(node);
+    }
+    if let Some(node) = node.conections.south {
+        connections.push(node);
+    }
+    if let Some(node) = node.conections.west {
+        connections.push(node);
+    }
+
+    if connections.len() > 0 {
+        return Some(connections)
+    }
+    else { return None }
+}
 
 #[derive(Clone, Copy, Debug)]
 struct Connectors {
@@ -266,7 +297,7 @@ impl PixelList {
                         acc.alpha = *byte;
                         let line_size: usize = dimensions.width.try_into().unwrap();
                         acc.point = Point {
-                            x: (i / RGBA) % 41,
+                            x: (i / RGBA) % line_size,
                             y: i / (line_size * RGBA),
                         };
                         pixel_list.push(acc.clone())
@@ -320,7 +351,7 @@ fn find_start(maze: &Maze) -> Vec<Point> {
     let height: usize = maze.dimensions.height.try_into().unwrap();
 
     // top and bottom
-    for y in 0..height {
+    for y in [0,height-1] {
         for x in 0..width {
             let current_location = Point { x, y };
             let node = match maze.nodes.get(&current_location) {
@@ -337,7 +368,7 @@ fn find_start(maze: &Maze) -> Vec<Point> {
         }
     }
 
-    for x in 0..height {
+    for x in [0,width-1] {
         for y in 0..width {
             let current_location = Point { x, y };
             let node = match maze.nodes.get(&current_location) {
