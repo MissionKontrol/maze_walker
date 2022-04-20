@@ -7,7 +7,7 @@ use png::OutputInfo;
 fn main() {
     // The decoder is a build for reader and can be used to set various decoding options
     // via `Transformations`. The default output transformation is `Transformations::IDENTITY`.
-    let decoder = png::Decoder::new(File::open("mazes/maze(6).png").unwrap());
+    let decoder = png::Decoder::new(File::open("mazes/maze(7).png").unwrap());
     let mut reader = decoder.read_info().unwrap();
     // Allocate the output buffer.
     let mut buf = vec![0; reader.output_buffer_size()];
@@ -54,7 +54,6 @@ fn solve_maze(maze: &Maze, start: &Point, end: &Point, last: &Point) {
             solve_maze(maze, point, end, last)
         }
     }
-    else { return }
 }
 
 fn get_connections(node:&MazeNode) -> Option<Vec<Point>> {
@@ -71,11 +70,11 @@ fn get_connections(node:&MazeNode) -> Option<Vec<Point>> {
     if let Some(node) = node.conections.west {
         connections.push(node);
     }
-
-    if connections.len() > 0 {
-        return Some(connections)
+    
+    if !connections.is_empty() {
+        Some(connections)
     }
-    else { return None }
+    else { None }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -112,11 +111,10 @@ impl MazeNode {
     }
 
     fn is_passable(&self) -> bool {
-        if 0 == self.passable {
-            false
-        } else {
-            true
+        if self.passable == 0 {
+            return false;
         }
+        true
     }
 }
 
@@ -160,8 +158,7 @@ impl Maze {
 
         let _foo = node_insert_list
             .iter()
-            .map(|(point, node)| maze.nodes.insert(*point, *node))
-            .flatten()
+            .flat_map(|(point, node)| maze.nodes.insert(*point, *node))
             .collect::<Vec<MazeNode>>();
 
         maze
@@ -170,14 +167,14 @@ impl Maze {
     fn print_maze(&self) {
         for y in 0..self.dimensions.height {
             for x in 0..self.dimensions.width {
-                let foo = self
+                let node = self
                     .nodes
                     .get(&Point {
                         x: x.try_into().unwrap(),
                         y: y.try_into().unwrap(),
                     })
                     .unwrap();
-                if foo.is_passable() {
+                if node.is_passable() {
                     print!(" ");
                 } else {
                     print!("*");
@@ -248,7 +245,7 @@ struct Dimensions {
     height: u32,
 }
 
-#[derive(Clone)]
+#[derive(Default, Clone)]
 struct Pixel {
     red: u8,
     green: u8,
@@ -263,18 +260,6 @@ impl Pixel {
             return true;
         }
         false
-    }
-}
-
-impl Default for Pixel {
-    fn default() -> Pixel {
-        Pixel {
-            red: 0,
-            green: 0,
-            blue: 0,
-            alpha: 0,
-            point: Default::default(),
-        }
     }
 }
 
@@ -388,14 +373,8 @@ fn find_start(maze: &Maze) -> Vec<Point> {
     entrace_list
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 struct Point {
     x: usize,
     y: usize,
-}
-
-impl Default for Point {
-    fn default() -> Point {
-        Point { x: 0, y: 0 }
-    }
 }
