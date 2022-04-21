@@ -45,7 +45,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "maze-walker"
+name = "maze_walker"
 version = "0.1.0"
 dependencies = [
  "png",
