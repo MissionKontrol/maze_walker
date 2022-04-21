@@ -7,7 +7,7 @@ use png::OutputInfo;
 fn main() {
     // The decoder is a build for reader and can be used to set various decoding options
     // via `Transformations`. The default output transformation is `Transformations::IDENTITY`.
-    let decoder = png::Decoder::new(File::open("mazes/maze(7).png").unwrap());
+    let decoder = png::Decoder::new(File::open("mazes/maze(9).png").unwrap());
     let mut reader = decoder.read_info().unwrap();
     // Allocate the output buffer.
     let mut buf = vec![0; reader.output_buffer_size()];
@@ -35,47 +35,10 @@ fn main() {
 
     let entrances = find_start(&maze);
     println!("Entrances {:?} {:?}", entrances[0], entrances[1]);
-    solve_maze(&maze, &entrances[0], &entrances[1], &entrances[1]);
+    maze.solve_maze( &entrances[0], &entrances[1], &entrances[1]);
 }
 
-fn solve_maze(maze: &Maze, start: &Point, end: &Point, last: &Point) {
-    if start == end {
-        println!("Found exit: {end:?}");
-        exit(0)
-    }
 
-    let current_node = maze.nodes.get(start).unwrap();
-    if let Some(connection_points) = get_connections(current_node) {
-        for point in connection_points.iter() {
-            println!("point: {point:?}  start: {start:?}");
-            if point == last { continue; }
-
-            let last = start;
-            solve_maze(maze, point, end, last)
-        }
-    }
-}
-
-fn get_connections(node:&MazeNode) -> Option<Vec<Point>> {
-    let mut connections: Vec<Point> = Vec::new();
-    if let Some(node) = node.conections.north {
-        connections.push(node);
-    }
-    if let Some(node) = node.conections.east {
-        connections.push(node);
-    }
-    if let Some(node) = node.conections.south {
-        connections.push(node);
-    }
-    if let Some(node) = node.conections.west {
-        connections.push(node);
-    }
-    
-    if !connections.is_empty() {
-        Some(connections)
-    }
-    else { None }
-}
 
 #[derive(Clone, Copy, Debug)]
 struct Connectors {
@@ -115,6 +78,27 @@ impl MazeNode {
             return false;
         }
         true
+    }
+
+    fn get_connections(&self) -> Option<Vec<Point>> {
+        let mut connections: Vec<Point> = Vec::with_capacity(4); // cardinal directions
+        if let Some(node) = self.conections.north {
+            connections.push(node);
+        }
+        if let Some(node) = self.conections.east {
+            connections.push(node);
+        }
+        if let Some(node) = self.conections.south {
+            connections.push(node);
+        }
+        if let Some(node) = self.conections.west {
+            connections.push(node);
+        }
+        
+        if !connections.is_empty() {
+            Some(connections)
+        }
+        else { None }
     }
 }
 
@@ -183,6 +167,25 @@ impl Maze {
             println!();
         }
     }
+
+    fn solve_maze(&self, start: &Point, end: &Point, last: &Point) {
+        if start == end {
+            println!("Found exit: {end:?}");
+            exit(0)
+        }
+    
+        let current_node = self.nodes.get(start).unwrap();
+        if let Some(connection_points) = current_node.get_connections() {
+            for point in connection_points.iter() {
+                println!("point: {point:?}  start: {start:?}");
+                if point == last { continue; }
+    
+                let last = start;
+                self.solve_maze( point, end, last)
+            }
+        }
+    }
+    
 }
 
 fn get_passable_neighbours(point: &Point, pixel_list: &PixelList) -> MazeNode {
@@ -230,6 +233,59 @@ fn get_passable_neighbours(point: &Point, pixel_list: &PixelList) -> MazeNode {
     }
 
     node_update
+}
+
+fn summarize(info: &OutputInfo) {
+    println!("width {} * height {}", info.width, info.height);
+    println!(
+        "bit depth {:?}, line size {}",
+        info.bit_depth, info.line_size
+    );
+    println!("colour type {:?}", info.color_type);
+}
+
+// look around the box edges, return passable
+fn find_start(maze: &Maze) -> Vec<Point> {
+    let mut entrace_list: Vec<Point> = Vec::new();
+    let width: usize = maze.dimensions.width.try_into().unwrap();
+    let height: usize = maze.dimensions.height.try_into().unwrap();
+
+    // top and bottom
+    for y in [0,height-1] {
+        for x in 0..width {
+            let current_location = Point { x, y };
+            let node = match maze.nodes.get(&current_location) {
+                Some(pixel) => pixel,
+                None => panic!(
+                    "invalid pixel index {},{}",
+                    current_location.x, current_location.y
+                ),
+            };
+
+            if node.is_passable() {
+                entrace_list.push(current_location);
+            }
+        }
+    }
+
+    for x in [0,width-1] {
+        for y in 0..width {
+            let current_location = Point { x, y };
+            let node = match maze.nodes.get(&current_location) {
+                Some(pixel) => pixel,
+                None => panic!(
+                    "invalid pixel index {},{}",
+                    current_location.x, current_location.y
+                ),
+            };
+
+            if node.is_passable() {
+                entrace_list.push(current_location);
+            }
+        }
+    }
+
+    entrace_list
 }
 
 fn get_from_bool(x: bool) -> u8 {
@@ -320,58 +376,6 @@ impl PixelList {
     }
 }
 
-fn summarize(info: &OutputInfo) {
-    println!("width {} * height {}", info.width, info.height);
-    println!(
-        "bit depth {:?}, line size {}",
-        info.bit_depth, info.line_size
-    );
-    println!("colour type {:?}", info.color_type);
-}
-
-// look around the box edges, return passable
-fn find_start(maze: &Maze) -> Vec<Point> {
-    let mut entrace_list: Vec<Point> = Vec::new();
-    let width: usize = maze.dimensions.width.try_into().unwrap();
-    let height: usize = maze.dimensions.height.try_into().unwrap();
-
-    // top and bottom
-    for y in [0,height-1] {
-        for x in 0..width {
-            let current_location = Point { x, y };
-            let node = match maze.nodes.get(&current_location) {
-                Some(pixel) => pixel,
-                None => panic!(
-                    "invalid pixel index {},{}",
-                    current_location.x, current_location.y
-                ),
-            };
-
-            if node.is_passable() {
-                entrace_list.push(current_location);
-            }
-        }
-    }
-
-    for x in [0,width-1] {
-        for y in 0..width {
-            let current_location = Point { x, y };
-            let node = match maze.nodes.get(&current_location) {
-                Some(pixel) => pixel,
-                None => panic!(
-                    "invalid pixel index {},{}",
-                    current_location.x, current_location.y
-                ),
-            };
-
-            if node.is_passable() {
-                entrace_list.push(current_location);
-            }
-        }
-    }
-
-    entrace_list
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 struct Point {
