@@ -308,7 +308,14 @@ impl Maze {
         entrace_list
     }
 
-    pub fn solve_maze(&self, start: &Point, end: &Point, last: &Point) {
+    pub fn solve_maze(&self, start: &Point, end: &Point) {
+        let mut _path: Vec<Point> = Vec::new();
+        let last = start;
+
+        let _path = self.recurse_solve(start, end, last);
+    }
+
+    fn recurse_solve(&self, start: &Point, end: &Point, last: &Point) {
         if start == end {
             println!("Found exit: {end:?}");
             exit(0)
@@ -321,7 +328,7 @@ impl Maze {
                 if point == last { continue; }
     
                 let last = start;
-                self.solve_maze( point, end, last)
+                self.recurse_solve( point, end, last)
             }
         }
     }

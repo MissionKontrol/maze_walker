@@ -11,7 +11,7 @@ fn main() {
     let mut buf = vec![0; reader.output_buffer_size()];
     // Read the next frame. An APNG might contain multiple frames.
     let info = reader.next_frame(&mut buf).unwrap();
-    summarize(&info);
+    summarize(&info); 
 
     // Grab the bytes of the image.
     let bytes = &buf[..info.buffer_size()];
@@ -33,7 +33,7 @@ fn main() {
 
     let entrances = maze.find_start();
     println!("Entrances {:?} {:?}", entrances[0], entrances[1]);
-    maze.solve_maze( &entrances[0], &entrances[1], &entrances[1]);
+    maze.solve_maze( &entrances[0], &entrances[1]);
 }
 
 fn summarize(info: &OutputInfo) {
