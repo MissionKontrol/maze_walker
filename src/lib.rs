@@ -333,6 +333,31 @@ impl Maze {
         }
     }
 
+    fn _iter_solve(&self, start: &Point, end: &Point) {
+        let mut node = self.nodes.get(start).unwrap();
+        let seen_nodes: Vec<&Point> = Vec::new();
+        let mut path = Path::new();
+
+        loop {
+            let connections = node.get_connections().unwrap();
+            let next_point = connections.iter().find(|x| !visited(*x, &seen_nodes) );
+
+            if let Some(point) = next_point {
+                path.push(point);
+                node = self.nodes.get(point).unwrap();
+                if point == end { break }
+            }
+            else {
+                node = self.nodes.get(&path.pop()).unwrap();
+            }
+
+        }
+
+        path.push(start);
+        let connections = node.get_connections();
+
+    }
+
     fn get_from_bool(x: bool) -> u8 {
         match x {
             true => 1,
@@ -340,3 +365,31 @@ impl Maze {
         }
     }
 }
+
+fn visited( point: &Point, visited: &Vec<&Point>) -> bool {
+    if let Some(point) = visited.iter().find(|x| **x == point ) {
+        true
+    } else {
+        false
+    }
+}
+
+#[derive(Clone)]
+struct Path {
+    path: Vec<&Point>,
+}
+
+impl Path {
+    fn new() -> Self { 
+        Path { path: Vec::new() }
+    }
+
+    fn push(&mut self, point: &Point) {
+        self.path.push(point);
+    }
+
+    fn pop(&mut self) -> Point {
+        self.path.pop().unwrap()
+    }
+}
+
