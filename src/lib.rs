@@ -182,18 +182,18 @@ impl MazeNode {
         true
     }
 
-    fn get_connections(&self) -> Option<Vec<Point>> {
-        let mut connections: Vec<Point> = Vec::with_capacity(4); // cardinal directions
-        if let Some(node) = self.conections.north {
+    fn get_connections(&self) -> Option<Vec<&Point>> {
+        let mut connections: Vec<&Point> = Vec::with_capacity(4); // cardinal directions
+        if let Some(node) = &self.conections.north {
             connections.push(node);
         }
-        if let Some(node) = self.conections.east {
+        if let Some(node) = &self.conections.east {
             connections.push(node);
         }
-        if let Some(node) = self.conections.south {
+        if let Some(node) = &self.conections.south {
             connections.push(node);
         }
-        if let Some(node) = self.conections.west {
+        if let Some(node) = &self.conections.west {
             connections.push(node);
         }
         
@@ -310,12 +310,13 @@ impl Maze {
 
     pub fn solve_maze(&self, start: &Point, end: &Point) {
         let mut _path: Vec<Point> = Vec::new();
-        let last = start;
+        let _last = start;
 
-        let _path = self.recurse_solve(start, end, last);
+        let path = self.iter_solve(start, end);
+        path.print();
     }
 
-    fn recurse_solve(&self, start: &Point, end: &Point, last: &Point) {
+    fn _recurse_solve(&self, start: &Point, end: &Point, last: &Point) {
         if start == end {
             println!("Found exit: {end:?}");
             exit(0)
@@ -325,37 +326,37 @@ impl Maze {
         if let Some(connection_points) = current_node.get_connections() {
             for point in connection_points.iter() {
                 println!("point: {point:?}  start: {start:?}");
-                if point == last { continue; }
+                if *point == last { continue; }
     
                 let last = start;
-                self.recurse_solve( point, end, last)
+                self._recurse_solve( point, end, last)
             }
         }
     }
 
-    fn _iter_solve(&self, start: &Point, end: &Point) {
+    fn iter_solve(&self, start: &Point, end: &Point) -> Path {
         let mut node = self.nodes.get(start).unwrap();
-        let seen_nodes: Vec<&Point> = Vec::new();
+        let mut visited_nodes: Vec<&Point> = Vec::new();
+        visited_nodes.push(start);
         let mut path = Path::new();
 
         loop {
             let connections = node.get_connections().unwrap();
-            let next_point = connections.iter().find(|x| !visited(*x, &seen_nodes) );
+            let next_point = connections.iter().find(|x| !visited(*x, &visited_nodes) );
 
             if let Some(point) = next_point {
                 path.push(point);
+                visited_nodes.push(point);
+
                 node = self.nodes.get(point).unwrap();
-                if point == end { break }
+                if *point == end { break }
             }
             else {
                 node = self.nodes.get(&path.pop()).unwrap();
             }
-
         }
 
-        path.push(start);
-        let connections = node.get_connections();
-
+        path
     }
 
     fn get_from_bool(x: bool) -> u8 {
@@ -367,7 +368,7 @@ impl Maze {
 }
 
 fn visited( point: &Point, visited: &Vec<&Point>) -> bool {
-    if let Some(point) = visited.iter().find(|x| **x == point ) {
+    if let Some(_) = visited.iter().find(|x| **x == point ) {
         true
     } else {
         false
@@ -375,21 +376,28 @@ fn visited( point: &Point, visited: &Vec<&Point>) -> bool {
 }
 
 #[derive(Clone)]
-struct Path {
-    path: Vec<&Point>,
+struct Path<'a> {
+    path: Vec<&'a Point>,
 }
 
-impl Path {
+impl<'a> Path<'a> {
     fn new() -> Self { 
         Path { path: Vec::new() }
     }
 
-    fn push(&mut self, point: &Point) {
+    fn push(&mut self, point: &'a Point) {
         self.path.push(point);
     }
 
-    fn pop(&mut self) -> Point {
+    fn pop(&mut self) -> &Point {
         self.path.pop().unwrap()
+    }
+
+    fn print(&self) {
+        for node in &self.path {
+            print!("{node:?} ");
+        }
+        println!();
     }
 }
 
