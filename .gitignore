@@ -3,3 +3,4 @@ maze*.png
 /mazes
 foo
 .vscode
+pkg/
