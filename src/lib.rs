@@ -312,7 +312,9 @@ impl Maze {
         let mut _path: Vec<Point> = Vec::new();
         let _last = start;
 
+        // let path = self._recurse_solve(start, end, _last);
         let path = self.iter_solve(start, end);
+        
         path.print();
     }
 
