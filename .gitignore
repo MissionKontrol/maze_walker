@@ -4,3 +4,4 @@ maze*.png
 foo
 .vscode
 pkg/
+/maze-walker
