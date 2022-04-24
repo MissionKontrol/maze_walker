@@ -1,8 +1,6 @@
 use std::collections::BTreeMap;
-use wasm_bindgen::prelude::*;
 use std::process::exit;
 
-#[wasm_bindgen]
 #[derive(Clone, Copy, Debug)]
 struct Connectors {
     north: Option<Point>,
@@ -11,7 +9,6 @@ struct Connectors {
     west: Option<Point>,
 }
 
-#[wasm_bindgen]
 impl Connectors {
     fn new() -> Self {
         Connectors {
@@ -23,19 +20,16 @@ impl Connectors {
     }
 }
 
-#[wasm_bindgen]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub struct Point {
     x: usize,
     y: usize,
 }
 
-#[wasm_bindgen]
 pub struct PointList {
     points: Vec<Point>,
 }
 
-#[wasm_bindgen]
 impl PointList {
     pub fn get_start(&self) -> Point {
         *self.points.first().unwrap()
@@ -46,7 +40,6 @@ impl PointList {
     }
 }
 
-#[wasm_bindgen]
 #[derive(Clone, Copy)]
 pub struct Dimensions {
     pub width: u32,
@@ -71,13 +64,11 @@ impl Pixel {
     }
 }
 
-#[wasm_bindgen]
 pub struct PixelList {
     list: Vec<Pixel>,
     dimensions: Dimensions,
 }
 
-#[wasm_bindgen]
 impl PixelList {
     pub fn new(array: &[u8], dimensions: Dimensions) -> Self {
         const RGBA: usize = 4;
@@ -226,13 +217,11 @@ impl MazeNode {
     }
 }
 
-#[wasm_bindgen]
 pub struct Maze {
     dimensions: Dimensions,
     nodes: BTreeMap<Point, MazeNode>,
 }
 
-#[wasm_bindgen]
 impl Maze {
     pub fn new(dimensions: Dimensions, pixel_list: &PixelList) -> Self {
         let mut maze = Maze {
