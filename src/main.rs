@@ -32,8 +32,8 @@ fn main() {
     maze.print_maze();
 
     let entrances = maze.find_start();
-    println!("Entrances {:?} {:?}", entrances[0], entrances[1]);
-    maze.solve_maze( &entrances[0], &entrances[1]);
+    println!("Entrances {:?} {:?}", entrances.get_start(), entrances.get_end());
+    maze.solve_maze( &entrances.get_start(), &entrances.get_end());
 }
 
 fn summarize(info: &OutputInfo) {
