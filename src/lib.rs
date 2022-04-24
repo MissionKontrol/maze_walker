@@ -1,4 +1,5 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, fs::File};
+use wasm_bindgen::prelude::*;
 use std::process::exit;
 
 #[derive(Clone, Copy, Debug)]
@@ -20,16 +21,19 @@ impl Connectors {
     }
 }
 
+#[wasm_bindgen]
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub struct Point {
     x: usize,
     y: usize,
 }
 
+#[wasm_bindgen]
 pub struct PointList {
     points: Vec<Point>,
 }
 
+#[wasm_bindgen]
 impl PointList {
     pub fn get_start(&self) -> Point {
         *self.points.first().unwrap()
@@ -40,6 +44,7 @@ impl PointList {
     }
 }
 
+#[wasm_bindgen]
 #[derive(Clone, Copy)]
 pub struct Dimensions {
     pub width: u32,
@@ -64,11 +69,13 @@ impl Pixel {
     }
 }
 
+#[wasm_bindgen]
 pub struct PixelList {
     list: Vec<Pixel>,
     dimensions: Dimensions,
 }
 
+#[wasm_bindgen]
 impl PixelList {
     pub fn new(array: &[u8], dimensions: Dimensions) -> Self {
         const RGBA: usize = 4;
@@ -217,11 +224,13 @@ impl MazeNode {
     }
 }
 
+#[wasm_bindgen]
 pub struct Maze {
     dimensions: Dimensions,
     nodes: BTreeMap<Point, MazeNode>,
 }
 
+#[wasm_bindgen]
 impl Maze {
     pub fn new(dimensions: Dimensions, pixel_list: &PixelList) -> Self {
         let mut maze = Maze {
@@ -413,5 +422,35 @@ impl<'a> Path<'a> {
             print!("{node:?} ");
         }
         println!();
+    }
+}
+
+#[wasm_bindgen]
+pub struct Pnger {
+    dimensions: Dimensions,
+    bytes: Vec<u8>, 
+}
+
+#[wasm_bindgen]
+impl Pnger {
+    pub fn new(file_name: &str) -> Self {
+        let decoder = png::Decoder::new(File::open(file_name).unwrap());
+        let mut reader = decoder.read_info().unwrap();
+        let mut buffer = vec![0; reader.output_buffer_size()];
+        let info = reader.next_frame(&mut buffer).unwrap();
+
+        let bytes = &buffer[..info.buffer_size()];
+        let dimensions = Dimensions { height: info.height, width: info.width };
+
+        Pnger { dimensions, bytes: bytes.to_vec() }
+    }
+
+    pub fn height(&self) -> u32 { self.dimensions.height }
+    pub fn width(&self) -> u32 { self.dimensions.width }
+    pub fn get_bytes(&self) -> Vec<u8> { self.bytes.clone() }
+    pub fn dimensions(&self) -> Dimensions { self.dimensions }
+
+    pub fn summarize(&self) {
+        println!("width {} * height {}", self.width(), self.height());
     }
 }
