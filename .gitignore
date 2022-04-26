@@ -1,7 +1,10 @@
 /target
-maze*.png
 /mazes
 foo
 .vscode
-pkg/
-/maze-walker
+
+node_modules
+/dist
+/target
+/pkg
+/wasm-pack.log
