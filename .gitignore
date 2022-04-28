@@ -1,7 +1,8 @@
 /target
-/mazes
+/img
 foo
 .vscode
+/www
 
 node_modules
 /dist
