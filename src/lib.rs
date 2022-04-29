@@ -1,8 +1,6 @@
-use std::{collections::BTreeMap, fs::File, error::Error};
+use std::{collections::BTreeMap, fs::File};
 use wasm_bindgen::prelude::*;
 use std::process::exit;
-use web_sys::console;
-use js_sys::Array;
 
 #[derive(Clone, Copy, Debug)]
 struct Connectors {
@@ -427,29 +425,19 @@ impl<'a> Path<'a> {
     }
 }
 
-#[wasm_bindgen]
 pub struct Pnger {
     dimensions: Dimensions,
     bytes: Vec<u8>, 
 }
 
-#[wasm_bindgen]
 impl Pnger {
     pub fn new(file_name: &str) -> Self {
-        console::log_1(&"Attempting opening".into());
-        
+
         let open_file = File::open(file_name).unwrap_or_else(|e| {
-            console::log_1(&"Error Okay".into()); 
             let error_string = format!("Error: {e:?}");
-            console::log_2(&"Error: {}".into(),&error_string.into()); 
-
-            panic!("urhg argh!")
+            panic!("urhg argh! {error_string}")
         });
-        console::log_1(&"Okay opening".into());
-
-        console::log_1(&"File opened".into());
         let decoder = png::Decoder::new(open_file);
-        console::log_1(&"File decoded".into());
         
         let mut reader = decoder.read_info().unwrap();
         let mut buffer = vec![0; reader.output_buffer_size()];
