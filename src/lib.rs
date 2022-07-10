@@ -1,5 +1,4 @@
 use std::{collections::BTreeMap, fs::File};
-use wasm_bindgen::prelude::*;
 use std::process::exit;
 
 #[derive(Clone, Copy, Debug)]
@@ -21,19 +20,25 @@ impl Connectors {
     }
 }
 
-#[wasm_bindgen]
+
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub struct Point {
-    x: usize,
-    y: usize,
+    pub x: usize,
+    pub y: usize,
 }
 
-#[wasm_bindgen]
+impl Point {
+    pub fn to_tuple(&self) -> (usize,usize) {
+        (self.x, self.y)
+    }
+}
+
+
 pub struct PointList {
     points: Vec<Point>,
 }
 
-#[wasm_bindgen]
+
 impl PointList {
     pub fn get_start(&self) -> Point {
         *self.points.first().unwrap()
@@ -44,8 +49,8 @@ impl PointList {
     }
 }
 
-#[wasm_bindgen]
-#[derive(Clone, Copy)]
+
+#[derive(Clone, Copy, Debug)]
 pub struct Dimensions {
     pub width: u32,
     pub height: u32,
@@ -69,13 +74,13 @@ impl Pixel {
     }
 }
 
-#[wasm_bindgen]
+
 pub struct PixelList {
     list: Vec<Pixel>,
     dimensions: Dimensions,
 }
 
-#[wasm_bindgen]
+
 impl PixelList {
     pub fn new(array: &[u8], dimensions: Dimensions) -> Self {
         const RGBA: usize = 4;
@@ -224,13 +229,13 @@ impl MazeNode {
     }
 }
 
-#[wasm_bindgen]
+
 pub struct Maze {
     dimensions: Dimensions,
     nodes: BTreeMap<Point, MazeNode>,
 }
 
-#[wasm_bindgen]
+
 impl Maze {
     pub fn new(dimensions: Dimensions, pixel_list: &PixelList) -> Self {
         let mut maze = Maze {
@@ -258,12 +263,16 @@ impl Maze {
             })
             .collect();
 
-        let _foo = node_insert_list
+            let _foo = node_insert_list
             .iter()
             .flat_map(|(point, node)| maze.nodes.insert(*point, *node))
             .collect::<Vec<MazeNode>>();
 
         maze
+    }
+
+    pub fn get_dimensions(&self) -> Dimensions {
+        self.dimensions
     }
 
     pub fn print_maze(&self) {
@@ -330,14 +339,14 @@ impl Maze {
         PointList { points: entrace_list } 
     }
 
-    pub fn solve_maze(&self, start: &Point, end: &Point) {
-        let mut _path: Vec<Point> = Vec::new();
-        let _last = start;
+    pub fn solve_maze(&self, start: &Point, end: &Point) -> Path {
+        // let mut _path: Vec<Point> = Vec::new();
+        // let _last = start;
 
         // let path = self._recurse_solve(start, end, _last);
         let path = self.iter_solve(start, end);
-        
-        path.print();
+
+        path
     }
 
     fn _recurse_solve(&self, start: &Point, end: &Point, last: &Point) {
@@ -400,7 +409,7 @@ fn visited( point: &Point, visited: &Vec<&Point>) -> bool {
 }
 
 #[derive(Clone)]
-struct Path<'a> {
+pub struct Path<'a> {
     path: Vec<&'a Point>,
 }
 
@@ -408,6 +417,17 @@ impl<'a> Path<'a> {
     fn new() -> Self { 
         Path { path: Vec::new() }
     }
+
+    pub fn head(&self) -> &Point {
+        self.path[0]
+    }
+
+    pub fn next(&self, index: usize) -> Option<&'a Point> {
+        if self.path.len() > index {
+            return Some(self.path[index])
+        }
+        None
+    }    
 
     fn push(&mut self, point: &'a Point) {
         self.path.push(point);
@@ -422,6 +442,10 @@ impl<'a> Path<'a> {
             print!("{node:?} ");
         }
         println!();
+    }
+
+    pub fn into_iter(&self) -> std::slice::Iter<'_, &Point>  {
+         self.path.iter()
     }
 }
 
