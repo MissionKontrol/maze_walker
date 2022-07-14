@@ -272,8 +272,10 @@ impl Maze {
     }
 
     pub fn get_point_connections(&self, point: &Point) -> Option<Vec<&Point>> {
-        let point = self.nodes.get(point).unwrap();
-        point.get_connections()
+        if let Some(point) = self.nodes.get(point){
+            point.get_connections()
+        }
+        else { None }
     }
 
     pub fn get_dimensions(&self) -> Dimensions {
@@ -472,10 +474,19 @@ impl Pnger {
         let info = reader.next_frame(&mut buffer).unwrap();
 
         let bytes = &buffer[..info.buffer_size()];
+        dbg!(info.buffer_size());
         let dimensions = Dimensions { height: info.height, width: info.width };
 
         Pnger { dimensions, bytes: bytes.to_vec() }
     }
+
+    // pub fn get_maze_wall_size(&self) -> usize {
+    //     let mut n: usize = 0;  // 
+    //     while n < self.dimensions.height {
+    //         if self.bytes[n] 
+    //     }
+    //     todo!();
+    // }
 
     pub fn height(&self) -> u32 { self.dimensions.height }
     pub fn width(&self) -> u32 { self.dimensions.width }
