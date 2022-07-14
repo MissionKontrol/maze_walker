@@ -271,6 +271,11 @@ impl Maze {
         maze
     }
 
+    pub fn get_point_connections(&self, point: &Point) -> Option<Vec<&Point>> {
+        let point = self.nodes.get(point).unwrap();
+        point.get_connections()
+    }
+
     pub fn get_dimensions(&self) -> Dimensions {
         self.dimensions
     }
