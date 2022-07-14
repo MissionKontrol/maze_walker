@@ -441,7 +441,7 @@ impl<'a> Path<'a> {
         self.path.pop().unwrap()
     }
 
-    fn print(&self) {
+    fn _print(&self) {
         for node in &self.path {
             print!("{node:?} ");
         }
