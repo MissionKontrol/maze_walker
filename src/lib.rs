@@ -301,7 +301,7 @@ impl Maze {
     }
 
     // look around the box edges, return passable
-    pub fn find_start(&self) -> PointList {
+    pub fn find_start(&self) -> (Point,Point) {
         let mut entrace_list: Vec<Point> = Vec::new();
         let width: usize = self.dimensions.width.try_into().unwrap();
         let height: usize = self.dimensions.height.try_into().unwrap();
@@ -340,8 +340,7 @@ impl Maze {
                 }
             }
         }
-
-        PointList { points: entrace_list } 
+        (entrace_list[0],entrace_list[1])
     }
 
     pub fn solve_maze(&self, start: &Point, end: &Point) -> Path {
